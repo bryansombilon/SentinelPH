@@ -1,0 +1,5 @@
+{
+  "name": "Sentinel PH Dashboard",
+  "description": "A bento-style monitoring dashboard for the Philippines, featuring a real-time digital clock, live satellite weather imagery, earthquake activity monitoring, and AI-powered situation summaries.",
+  "requestFramePermissions": []
+}
