@@ -3,9 +3,32 @@ import { EarthquakeFeature } from "../types";
 
 // Initialize Gemini Client
 const getClient = () => {
-  const apiKey = process.env.API_KEY;
+  // Safe access to environment variables that works in both Node (process) and Vite (import.meta)
+  // This prevents the "process is not defined" crash in browser environments like Vercel
+  let apiKey: string | undefined;
+  
+  try {
+    // @ts-ignore
+    if (import.meta.env?.VITE_API_KEY) {
+        // @ts-ignore
+        apiKey = import.meta.env.VITE_API_KEY;
+    }
+  } catch (e) {
+      // Ignore
+  }
+
   if (!apiKey) {
-    console.warn("API_KEY is missing from environment variables.");
+      try {
+        if (typeof process !== 'undefined' && process.env) {
+            apiKey = process.env.API_KEY;
+        }
+      } catch (e) {
+          // Ignore
+      }
+  }
+
+  if (!apiKey) {
+    console.warn("API_KEY is missing. Please set VITE_API_KEY in your environment variables.");
     return null;
   }
   return new GoogleGenAI({ apiKey });
@@ -16,7 +39,7 @@ export const generateSituationReport = async (
   currentTime: string
 ): Promise<string> => {
   const ai = getClient();
-  if (!ai) return "AI Configuration Error: Missing API Key.";
+  if (!ai) return "AI System Standby (Missing Key)";
 
   // Summarize the latest earthquake data for the prompt
   const recentQuakes = earthquakes.slice(0, 5).map(q => 
