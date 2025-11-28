@@ -7,4 +7,8 @@ export default defineConfig({
   build: {
     outDir: 'dist',
   },
+  define: {
+    // Polyfill process.env to prevent crashes in libraries that expect Node environment
+    'process.env': {},
+  },
 });
