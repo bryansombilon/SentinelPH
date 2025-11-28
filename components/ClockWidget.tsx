@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 
 const ClockWidget: React.FC = () => {
@@ -21,9 +22,8 @@ const ClockWidget: React.FC = () => {
 
   const dateFormatter = new Intl.DateTimeFormat('en-PH', {
     timeZone: 'Asia/Manila',
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
+    weekday: 'short', // Shortened for compact view
+    month: 'short',
     day: 'numeric',
   });
 
@@ -39,21 +39,29 @@ const ClockWidget: React.FC = () => {
   const ampm = getPart('dayPeriod');
 
   return (
-    <div className="flex flex-col items-center justify-center h-full w-full p-6 text-center">
-      <div className="text-bento-accent text-sm font-mono tracking-widest mb-2 uppercase opacity-80">
-        Philippine Standard Time
+    <div className="flex flex-col items-center justify-center h-full w-full p-4 text-center relative overflow-hidden bg-bento-card border border-bento-border rounded-2xl shadow-lg">
+      <div className="absolute inset-0 bg-gradient-to-br from-bento-highlight/10 to-transparent pointer-events-none"></div>
+      
+      {/* Header */}
+      <div className="text-[10px] md:text-xs text-bento-accent font-mono tracking-widest mb-1 uppercase opacity-80 z-10 font-bold">
+        PST
       </div>
-      <div className="font-mono text-5xl md:text-7xl font-bold tracking-tighter text-white flex items-baseline justify-center">
+
+      {/* Main Time */}
+      <div className="font-mono text-6xl md:text-7xl font-bold tracking-tighter text-white flex items-baseline justify-center z-10 leading-none filter drop-shadow-xl">
         <span>{hours}</span>
-        <span className="animate-pulse mx-1 text-bento-highlight">:</span>
+        <span className="animate-pulse mx-0.5 text-bento-highlight -mt-2">:</span>
         <span>{minutes}</span>
-        
-        <div className="flex flex-col items-start ml-2 md:ml-3">
-           <span className="text-xl md:text-3xl text-gray-500 font-normal leading-none">{seconds}</span>
-           <span className="text-xs md:text-sm text-bento-accent font-bold leading-none mt-1">{ampm}</span>
-        </div>
       </div>
-      <div className="mt-4 text-gray-400 font-sans text-lg md:text-xl font-medium tracking-wide">
+
+      {/* Seconds & AM/PM */}
+      <div className="flex items-center gap-2 mt-2 z-10">
+          <span className="text-lg md:text-xl text-gray-400 font-mono font-medium">{seconds}</span>
+          <span className="text-xs md:text-sm text-bento-accent font-bold font-mono bg-bento-accent/10 px-1.5 py-0.5 rounded">{ampm}</span>
+      </div>
+
+      {/* Date */}
+      <div className="mt-2 text-gray-300 font-sans text-sm md:text-base font-semibold tracking-wide uppercase z-10 opacity-90">
         {dateString}
       </div>
     </div>
