@@ -4,7 +4,7 @@ import ClockWidget from './components/ClockWidget';
 import WeatherWidget from './components/WeatherWidget';
 import EarthquakeWidget from './components/EarthquakeWidget';
 import TyphoonWidget from './components/TyphoonWidget';
-import VolcanoWidget from './components/VolcanoWidget';
+import TrafficWidget from './components/TrafficWidget';
 import BaguioWeatherWidget from './components/BaguioWeatherWidget';
 
 const App: React.FC = () => {
@@ -62,12 +62,12 @@ const App: React.FC = () => {
 
         {/* --- ROW 4 (Right Side) --- */}
 
-        {/* 6. Volcano: Col 3-4, Row 4 (2x1) 
+        {/* 6. Traffic: Col 3-4, Row 4 (2x1) 
             Placed below Typhoon.
         */}
         <div className="md:col-span-2 md:row-span-1 bg-bento-card border border-bento-border rounded-2xl overflow-hidden shadow-lg relative group h-32 md:h-auto">
             <div className="absolute inset-0 bg-gradient-to-br from-bento-highlight/5 to-transparent pointer-events-none"></div>
-            <VolcanoWidget />
+            <TrafficWidget />
         </div>
 
       </main>

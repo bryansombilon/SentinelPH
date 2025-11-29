@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { EarthquakeFeature } from "../types";
 
@@ -82,3 +83,76 @@ export const generateSituationReport = async (
     return "System Offline: Unable to generate AI report.";
   }
 };
+
+export interface TrafficHotspot {
+    name: string;
+    status: 'Light' | 'Moderate' | 'Heavy' | 'Congested';
+    trend: 'Improving' | 'Worsening' | 'Stable';
+    details: string;
+}
+
+export const getBaguioTrafficAnalysis = async (): Promise<TrafficHotspot[]> => {
+    const ai = getClient();
+    const fallbackData: TrafficHotspot[] = [
+        { name: "Session Road", status: "Moderate", trend: "Stable", details: "Steady flow" },
+        { name: "Magsaysay Ave", status: "Heavy", trend: "Worsening", details: "Market traffic" },
+        { name: "City Hall Loop", status: "Moderate", trend: "Stable", details: "Intersection busy" },
+        { name: "Naguilian Rd", status: "Light", trend: "Stable", details: "Moving well" },
+        { name: "BGH Rotunda", status: "Congested", trend: "Worsening", details: "Merge heavy" },
+        { name: "Marcos Hwy", status: "Light", trend: "Stable", details: "Free flowing" },
+        { name: "Pacdal Circle", status: "Moderate", trend: "Stable", details: "Tourist traffic" },
+        { name: "Camp John Hay", status: "Light", trend: "Stable", details: "Flowing freely" },
+        { name: "Kisad Road", status: "Heavy", trend: "Worsening", details: "Volume buildup" }
+    ];
+
+    if (!ai) return fallbackData;
+
+    const now = new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
+
+    const prompt = `
+        Current Time in Baguio City: ${now}
+
+        Task: Estimate the current traffic conditions for these specific Baguio locations based on the time of day, day of week, and typical historical patterns:
+        1. Session Road
+        2. Magsaysay Avenue (Public Market area)
+        3. City Hall Loop / Abanao
+        4. Naguilian Road
+        5. BGH Rotunda (Baguio General Hospital)
+        6. Marcos Highway
+        7. Pacdal Circle
+        8. Camp John Hay
+        9. Kisad Road
+
+        Return ONLY a raw JSON array of objects. Do not use markdown blocks.
+        Format:
+        [
+          {
+            "name": "Location Name (Short)",
+            "status": "Light" | "Moderate" | "Heavy" | "Congested",
+            "trend": "Stable" | "Worsening" | "Improving",
+            "details": "Very short 3-4 word reason"
+          }
+        ]
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json'
+            }
+        });
+        
+        const text = response.text;
+        if (!text) return fallbackData;
+
+        // Clean any potential markdown remnants just in case
+        const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        return JSON.parse(cleanText) as TrafficHotspot[];
+
+    } catch (error) {
+        console.error("Traffic Analysis Error:", error);
+        return fallbackData;
+    }
+}

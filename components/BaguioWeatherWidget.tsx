@@ -8,6 +8,7 @@ interface WeatherData {
   weatherCode: number;
   windSpeed: number;
   precipitation: number;
+  feelsLike: number;
 }
 
 interface AirQualityData {
@@ -44,8 +45,9 @@ const BaguioWeatherWidget: React.FC = () => {
       try {
         setLoading(true);
         // Fetch Current, Hourly, and Daily
+        // Added apparent_temperature
         const weatherRes = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,relative_humidity_2m,weather_code,precipitation,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Asia%2FManila`
+          `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,relative_humidity_2m,weather_code,precipitation,wind_speed_10m,apparent_temperature&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Asia%2FManila`
         );
         const weatherData = await weatherRes.json();
 
@@ -61,6 +63,7 @@ const BaguioWeatherWidget: React.FC = () => {
           weatherCode: weatherData.current.weather_code,
           windSpeed: weatherData.current.wind_speed_10m,
           precipitation: weatherData.current.precipitation,
+          feelsLike: weatherData.current.apparent_temperature,
         });
         
         setForecast(weatherData.daily);
@@ -174,8 +177,11 @@ const BaguioWeatherWidget: React.FC = () => {
                                 {current?.temp?.toFixed(0)}°
                             </div>
                         </div>
-                        <div className="text-xs font-bold text-bento-accent font-mono uppercase tracking-wide mb-3">
+                        <div className="text-xs font-bold text-bento-accent font-mono uppercase tracking-wide mb-1">
                             {currentInfo.label}
+                        </div>
+                        <div className="text-[10px] text-gray-400 font-mono mb-3 bg-white/5 px-2 py-0.5 rounded-full border border-white/5">
+                            Feels {current?.feelsLike.toFixed(0)}°
                         </div>
 
                         {/* Metrics Grid */}

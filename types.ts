@@ -1,4 +1,3 @@
-
 export interface EarthquakeFeature {
   type: string;
   properties: {
@@ -60,7 +59,7 @@ export interface TyphoonData {
 
 export interface VolcanoStatus {
   name: string;
-  level: string; // e.g., "1", "2", "0"
+  level: string;
   date: string;
   url: string;
 }
