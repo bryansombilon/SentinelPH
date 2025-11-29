@@ -8,9 +8,10 @@ export const fetchTyphoonData = async (): Promise<TyphoonData> => {
   
   // Reuse proxy strategy from earthquake service
   const proxies = [
-    (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
     (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
     (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+    (url: string) => `https://thingproxy.freeboard.io/fetch/${url}`
   ];
 
   let fetchSuccess = false;
@@ -23,7 +24,10 @@ export const fetchTyphoonData = async (): Promise<TyphoonData> => {
         const timeoutId = setTimeout(() => controller.abort(), 8000);
 
         const target = proxy(targetUrlWithCacheBuster);
-        const response = await fetch(target, { signal: controller.signal });
+        const response = await fetch(target, { 
+            signal: controller.signal,
+            headers: { 'Accept': 'text/html' }
+        });
         clearTimeout(timeoutId);
 
         if (response.ok) {

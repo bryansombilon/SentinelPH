@@ -7,13 +7,16 @@ export const fetchEarthquakes = async (minMagnitude: number = 1.0, startTimeISO?
   let htmlText = '';
   
   // List of proxies to try in order. 
-  // 1. AllOrigins (Stable)
-  // 2. CorsProxy.io (Fast)
-  // 3. CodeTabs (Fallback)
+  // Added more proxies and refined fallback strategy.
   const proxies = [
-    (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    // CorsProxy.io is usually fastest
     (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    // AllOrigins is stable but sometimes rejects headers or complex params
+    (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    // CodeTabs often works but has strict rate limits
     (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+    // ThingProxy fallback
+    (url: string) => `https://thingproxy.freeboard.io/fetch/${url}`
   ];
 
   let fetchError;
@@ -30,10 +33,13 @@ export const fetchEarthquakes = async (minMagnitude: number = 1.0, startTimeISO?
         const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
 
         const target = proxy(targetUrlWithCacheBuster);
-        // console.log(`[Sentinel] Fetching via: ${target}`);
         
         const response = await fetch(target, {
-            signal: controller.signal
+            signal: controller.signal,
+            headers: {
+                // Sometimes helps with proxies forwarding headers
+                'Accept': 'text/html,application/xhtml+xml,application/xml'
+            }
         });
         
         clearTimeout(timeoutId);
@@ -45,20 +51,21 @@ export const fetchEarthquakes = async (minMagnitude: number = 1.0, startTimeISO?
                 htmlText = text;
                 fetchSuccess = true;
             } else {
-                throw new Error("Response invalid or missing data table");
+                // Continue to next proxy if content validation fails
+                continue; 
             }
         } else {
-             throw new Error(`HTTP Status ${response.status}`);
+             // Continue to next proxy on HTTP error
+             continue;
         }
     } catch (e) {
         fetchError = e;
-        // console.warn(`[Sentinel] Proxy failed, trying next...`, e);
         continue;
     }
   }
 
   if (!fetchSuccess || !htmlText) {
-    console.error("Failed to fetch data from all proxies", fetchError);
+    console.warn("Failed to fetch data from all proxies. Using cached or empty data.");
      return {
         type: "FeatureCollection",
         metadata: {

@@ -151,7 +151,18 @@ export const getBaguioTrafficAnalysis = async (): Promise<TrafficHotspot[]> => {
         const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
         return JSON.parse(cleanText) as TrafficHotspot[];
 
-    } catch (error) {
+    } catch (error: any) {
+        // Handle Quota Exceeded / Rate Limit errors gracefully
+        const isRateLimit = 
+            error?.status === 429 || 
+            error?.code === 429 || 
+            (error?.message && (error.message.includes('429') || error.message.includes('RESOURCE_EXHAUSTED')));
+
+        if (isRateLimit) {
+            console.warn("Gemini API Rate Limit hit (429) for Traffic Analysis. Using fallback data.");
+            return fallbackData;
+        }
+
         console.error("Traffic Analysis Error:", error);
         return fallbackData;
     }
