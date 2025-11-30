@@ -35,10 +35,59 @@ const getClient = () => {
   return new GoogleGenAI({ apiKey });
 };
 
+// --- Caching Helpers ---
+const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+
+const getFromCache = <T>(key: string): T | null => {
+    try {
+        const item = localStorage.getItem(key);
+        if (!item) return null;
+        
+        const { timestamp, data } = JSON.parse(item);
+        const age = Date.now() - timestamp;
+        
+        if (age < CACHE_DURATION) {
+            return data as T;
+        }
+        return null; // Expired
+    } catch (e) {
+        return null;
+    }
+};
+
+const getStaleCache = <T>(key: string): T | null => {
+    try {
+        const item = localStorage.getItem(key);
+        if (!item) return null;
+        const { data } = JSON.parse(item);
+        return data as T;
+    } catch (e) {
+        return null;
+    }
+}
+
+const saveToCache = (key: string, data: any) => {
+    try {
+        localStorage.setItem(key, JSON.stringify({
+            timestamp: Date.now(),
+            data
+        }));
+    } catch (e) {
+        console.warn("Failed to save to cache", e);
+    }
+};
+
+const REPORT_CACHE_KEY = 'sentinel_quake_report_cache';
+const TRAFFIC_CACHE_KEY = 'sentinel_traffic_cache';
+
 export const generateSituationReport = async (
   earthquakes: EarthquakeFeature[],
   currentTime: string
 ): Promise<string> => {
+  // 1. Check Cache
+  const cached = getFromCache<string>(REPORT_CACHE_KEY);
+  if (cached) return cached;
+
   const ai = getClient();
   if (!ai) return "AI System Standby (Missing Key)";
 
@@ -66,7 +115,11 @@ export const generateSituationReport = async (
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
-    return response.text || "Status Normal. Monitoring active.";
+    
+    const text = response.text || "Status Normal. Monitoring active.";
+    saveToCache(REPORT_CACHE_KEY, text);
+    return text;
+
   } catch (error: any) {
     // Handle Quota Exceeded / Rate Limit errors gracefully
     const isRateLimit = 
@@ -75,7 +128,9 @@ export const generateSituationReport = async (
         (error?.message && (error.message.includes('429') || error.message.includes('RESOURCE_EXHAUSTED')));
 
     if (isRateLimit) {
-        console.warn("Gemini API Rate Limit hit (429). Using fallback report.");
+        console.warn("Gemini API Rate Limit hit (429). Using stale cache or fallback.");
+        const stale = getStaleCache<string>(REPORT_CACHE_KEY);
+        if (stale) return stale;
         return "Status Normal. Monitoring active. (AI Standby)";
     }
 
@@ -92,6 +147,13 @@ export interface TrafficHotspot {
 }
 
 export const getBaguioTrafficAnalysis = async (): Promise<TrafficHotspot[]> => {
+    // 1. Check Fresh Cache
+    const cached = getFromCache<TrafficHotspot[]>(TRAFFIC_CACHE_KEY);
+    if (cached) {
+        console.log("Using cached traffic data (Save API Call)");
+        return cached;
+    }
+
     const ai = getClient();
     const fallbackData: TrafficHotspot[] = [
         { name: "Session Road", status: "Moderate", trend: "Stable", details: "Steady flow" },
@@ -149,7 +211,12 @@ export const getBaguioTrafficAnalysis = async (): Promise<TrafficHotspot[]> => {
 
         // Clean any potential markdown remnants just in case
         const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-        return JSON.parse(cleanText) as TrafficHotspot[];
+        const result = JSON.parse(cleanText) as TrafficHotspot[];
+        
+        // Save to cache on success
+        saveToCache(TRAFFIC_CACHE_KEY, result);
+        
+        return result;
 
     } catch (error: any) {
         // Handle Quota Exceeded / Rate Limit errors gracefully
@@ -159,7 +226,12 @@ export const getBaguioTrafficAnalysis = async (): Promise<TrafficHotspot[]> => {
             (error?.message && (error.message.includes('429') || error.message.includes('RESOURCE_EXHAUSTED')));
 
         if (isRateLimit) {
-            console.warn("Gemini API Rate Limit hit (429) for Traffic Analysis. Using fallback data.");
+            console.warn("Gemini API Rate Limit hit (429) for Traffic Analysis. Attempting to use stale cache.");
+            
+            // 2. Try Stale Cache before hard fallback
+            const stale = getStaleCache<TrafficHotspot[]>(TRAFFIC_CACHE_KEY);
+            if (stale) return stale;
+
             return fallbackData;
         }
 
