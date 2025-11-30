@@ -41,19 +41,35 @@ const TrafficWidget: React.FC = () => {
 
   const getTrendVisuals = (trend: string) => {
       if (trend === 'Worsening') return { 
-          icon: <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="rotate-[-45deg]"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>, 
-          color: 'text-red-400', 
-          bg: 'bg-red-400/10' 
+          icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 17L17 7" />
+                <path d="M7 7h10v10" />
+            </svg>
+          ),
+          color: 'text-red-100', 
+          bg: 'bg-red-500/80 border border-red-400', 
+          glow: 'shadow-[0_0_10px_rgba(239,68,68,0.6)]',
+          animate: 'animate-pulse'
       };
       if (trend === 'Improving') return { 
-          icon: <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="rotate-[45deg]"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>, 
-          color: 'text-emerald-400', 
-          bg: 'bg-emerald-400/10' 
+          icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 7L17 17" />
+                <path d="M17 7v10H7" />
+            </svg>
+          ),
+          color: 'text-emerald-100', 
+          bg: 'bg-emerald-500/80 border border-emerald-400', 
+          glow: 'shadow-[0_0_10px_rgba(16,185,129,0.6)]',
+          animate: '' 
       };
       return { 
-          icon: <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>, 
-          color: 'text-gray-500', 
-          bg: 'bg-gray-500/10' 
+          icon: <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>, 
+          color: 'text-gray-400', 
+          bg: 'bg-gray-800/50 border border-gray-700', 
+          glow: '',
+          animate: ''
       };
   };
 
@@ -85,7 +101,7 @@ const TrafficWidget: React.FC = () => {
         </div>
 
         {/* Horizontal Gallery */}
-        <div className="flex-grow min-h-0 overflow-x-auto overflow-y-hidden pb-1 custom-scrollbar">
+        <div className="flex-grow min-h-0 overflow-x-auto overflow-y-hidden pb-1 custom-scrollbar scroll-smooth snap-x">
             {loading && data.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-gray-500 gap-2 w-full">
                     <div className="w-5 h-5 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
@@ -98,7 +114,8 @@ const TrafficWidget: React.FC = () => {
                         const trend = getTrendVisuals(spot.trend);
                         
                         return (
-                            <div key={idx} className={`flex-none w-32 md:w-40 h-full rounded-xl border p-3 flex flex-col justify-between transition-all duration-300 ${styleClass} group relative`}>
+                            <div key={idx} className={`flex-none w-32 md:w-40 h-full rounded-xl border p-3 flex flex-col justify-between transition-all duration-300 ${styleClass} group relative overflow-hidden snap-start hover:scale-[1.02]`}>
+                                
                                 {/* Top Section: Name */}
                                 <div>
                                     <div className="flex justify-between items-start">
@@ -109,7 +126,7 @@ const TrafficWidget: React.FC = () => {
                                             {getStatusIcon(spot.status)}
                                         </div>
                                     </div>
-                                    <div className="text-[9px] font-mono leading-tight mt-1 opacity-70 truncate">
+                                    <div className="text-[9px] font-mono leading-tight mt-1 opacity-70 truncate" title={spot.details}>
                                         {spot.details}
                                     </div>
                                 </div>
@@ -124,7 +141,7 @@ const TrafficWidget: React.FC = () => {
                                     </div>
                                     
                                     {spot.trend !== 'Stable' && (
-                                        <div className={`flex items-center gap-1 p-1 rounded ${trend.bg} ${trend.color} backdrop-blur-sm`}>
+                                        <div className={`flex items-center justify-center w-6 h-6 rounded-full ${trend.bg} ${trend.color} ${trend.glow} ${trend.animate} backdrop-blur-sm shadow-md`}>
                                             {trend.icon}
                                         </div>
                                     )}

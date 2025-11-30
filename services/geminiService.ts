@@ -78,7 +78,7 @@ const saveToCache = (key: string, data: any) => {
 };
 
 const REPORT_CACHE_KEY = 'sentinel_quake_report_cache';
-const TRAFFIC_CACHE_KEY = 'sentinel_traffic_cache';
+const TRAFFIC_CACHE_KEY = 'sentinel_traffic_cache_v2'; // Bumped version to force refresh
 
 export const generateSituationReport = async (
   earthquakes: EarthquakeFeature[],
@@ -164,7 +164,8 @@ export const getBaguioTrafficAnalysis = async (): Promise<TrafficHotspot[]> => {
         { name: "Marcos Hwy", status: "Light", trend: "Stable", details: "Free flowing" },
         { name: "Pacdal Circle", status: "Moderate", trend: "Stable", details: "Tourist traffic" },
         { name: "Camp John Hay", status: "Light", trend: "Stable", details: "Flowing freely" },
-        { name: "Kisad Road", status: "Heavy", trend: "Worsening", details: "Volume buildup" }
+        { name: "Kisad Road", status: "Heavy", trend: "Worsening", details: "Volume buildup" },
+        { name: "Panagbenga Park Rotonda", status: "Moderate", trend: "Stable", details: "Rotonda merging" }
     ];
 
     if (!ai) return fallbackData;
@@ -184,6 +185,7 @@ export const getBaguioTrafficAnalysis = async (): Promise<TrafficHotspot[]> => {
         7. Pacdal Circle
         8. Camp John Hay
         9. Kisad Road
+        10. Panagbenga Park Rotonda
 
         Return ONLY a raw JSON array of objects. Do not use markdown blocks.
         Format:

@@ -241,12 +241,12 @@ const BaguioWeatherWidget: React.FC = () => {
              {/* Hourly Section */}
              <div className="flex-none mb-3">
                 <div className="text-[10px] font-bold text-gray-500 font-mono uppercase mb-1">Next 24 Hours</div>
-                <div className="flex overflow-x-auto gap-2 pb-2 custom-scrollbar">
+                <div className="flex overflow-x-auto gap-2 pb-2 custom-scrollbar scroll-smooth snap-x snap-mandatory">
                     {hourlyData.map((h, i) => {
                          const time = formatHourlyTime(h.time);
                          const info = getWeatherInfo(h.weather_code);
                          return (
-                             <div key={i} className="flex flex-col items-center min-w-[40px] p-1.5 bg-white/5 rounded border border-transparent hover:border-white/10 shrink-0">
+                             <div key={i} className="flex flex-col items-center min-w-[40px] p-1.5 bg-white/5 rounded border border-transparent hover:border-white/10 shrink-0 snap-start">
                                  <span className="text-[9px] text-gray-400 font-mono mb-1">{time}</span>
                                  <span className="text-lg mb-1 filter drop-shadow-sm">{info.icon}</span>
                                  <span className="text-[10px] font-bold text-white">{h.temp.toFixed(0)}°</span>
