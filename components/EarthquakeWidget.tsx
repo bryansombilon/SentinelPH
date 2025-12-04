@@ -82,9 +82,11 @@ const EarthquakeWidget: React.FC = () => {
             const timeStr = new Date(quake.properties.time).toLocaleTimeString('en-PH', { timeZone: 'Asia/Manila', hour: '2-digit', minute:'2-digit' });
             
             let color = '#06b6d4'; // Cyan default
-            if (mag >= 4) color = '#eab308'; // Yellow
-            if (mag >= 5) color = '#f97316'; // Orange
-            if (mag >= 6) color = '#ef4444'; // Red
+            let magClass = 'text-cyan-500 border-cyan-500/50 bg-cyan-500/10';
+            
+            if (mag >= 4) { color = '#eab308'; magClass = 'text-yellow-500 border-yellow-500/50 bg-yellow-500/10'; }
+            if (mag >= 5) { color = '#f97316'; magClass = 'text-orange-500 border-orange-500/50 bg-orange-500/10'; }
+            if (mag >= 6) { color = '#ef4444'; magClass = 'text-red-500 border-red-500/50 bg-red-500/10'; }
 
             const marker = L.circleMarker([lat, lon], {
                 radius: Math.max(mag * 2.5, 6), // Scale radius by magnitude, min size 6
@@ -95,31 +97,31 @@ const EarthquakeWidget: React.FC = () => {
                 fillOpacity: 0.5
             }).addTo(map);
 
-            // Tooltip on hover (simplified)
-            marker.bindTooltip(`M${mag.toFixed(1)}`, {
-                direction: 'top',
-                className: 'bg-bento-card text-white border-0 text-xs font-mono px-1 py-0.5'
-            });
-
             // Create DOM element for Popup
             const popupDiv = document.createElement('div');
-            const magColorClass = mag >= 6 ? 'text-red-500' : (mag >= 5 ? 'text-orange-500' : (mag >= 4 ? 'text-yellow-500' : 'text-cyan-500'));
-
             popupDiv.innerHTML = `
-                <div class="flex flex-col gap-1 min-w-[160px]">
-                    <div class="flex items-center justify-between mb-1 pb-1 border-b border-gray-700">
-                         <span class="font-mono font-bold text-sm ${magColorClass}">M ${mag.toFixed(1)}</span>
-                         <span class="font-mono text-[10px] text-gray-400">${timeStr}</span>
+                <div class="flex flex-col gap-2 min-w-[180px] p-1 font-sans">
+                    <div class="flex items-center justify-between border-b border-white/10 pb-1 mb-1">
+                        <span class="text-[9px] font-bold text-gray-500 font-mono uppercase tracking-wider">Event Details</span>
+                        <span class="text-[10px] text-gray-400 font-mono">${timeStr}</span>
                     </div>
-                    <div class="text-xs font-bold text-gray-200 leading-tight my-1">${quake.properties.place}</div>
-                    <div class="text-[9px] font-mono text-gray-500">Depth: ${quake.geometry.coordinates[2]}km</div>
+                    
+                    <div class="flex items-start gap-3">
+                         <div class="flex-none flex items-center justify-center w-10 h-10 rounded-lg ${magClass} border font-bold text-lg font-mono">
+                            ${mag.toFixed(1)}
+                         </div>
+                         <div class="flex flex-col min-w-0">
+                            <span class="text-[9px] text-gray-500 font-mono uppercase leading-none mb-0.5">Location</span>
+                            <span class="text-xs font-bold text-white leading-tight line-clamp-2">${quake.properties.place}</span>
+                         </div>
+                    </div>
                 </div>
             `;
 
             // Add interactive button to popup
             const btn = document.createElement('button');
-            btn.className = "mt-2 w-full py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-[9px] font-mono uppercase text-gray-300 transition-colors cursor-pointer";
-            btn.innerText = "Open Analysis";
+            btn.className = "mt-2 w-full py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-[9px] font-mono uppercase text-gray-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center gap-1";
+            btn.innerHTML = `<span>View Analysis</span> <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>`;
             btn.onclick = (e) => {
                 e.preventDefault();
                 setSelectedQuake(quake);
@@ -193,7 +195,7 @@ const EarthquakeWidget: React.FC = () => {
                 <span className="text-[10px] font-mono text-bento-accent tracking-widest uppercase">Event Details</span>
             </div>
 
-            <div className="flex-grow overflow-y-auto space-y-4">
+            <div className="flex-grow overflow-y-auto space-y-4 custom-scrollbar pr-1">
                 
                 {/* Hero Section */}
                 <div className="flex flex-col items-center justify-center py-2 space-y-1">
@@ -360,7 +362,7 @@ const EarthquakeWidget: React.FC = () => {
                     <div className="col-span-3 text-right">Time</div>
                 </div>
 
-                <div className="flex-grow overflow-y-auto pr-2 space-y-2 min-h-0">
+                <div className="flex-grow overflow-y-auto pr-2 space-y-2 min-h-0 custom-scrollbar">
                     {status === LoadingState.ERROR && (
                         <div className="text-red-400 text-sm text-center py-4 border border-red-900/50 rounded bg-red-900/10">
                         Connection Lost. Retrying...

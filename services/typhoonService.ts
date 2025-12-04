@@ -51,9 +51,13 @@ export const fetchTyphoonData = async (): Promise<TyphoonData> => {
   const doc = parser.parseFromString(htmlText, 'text/html');
 
   // 1. Check for No Active Cyclone
-  // PAGASA usually puts a specific message when there's no cyclone
   const bodyText = doc.body.textContent || "";
-  if (bodyText.includes("There is no active tropical cyclone") || bodyText.includes("No Active Tropical Cyclone")) {
+  // Check for common "No Active" phrases
+  if (
+      bodyText.includes("There is no active tropical cyclone") || 
+      bodyText.includes("No Active Tropical Cyclone") ||
+      bodyText.includes("No Tropical Cyclone is currently monitoring")
+  ) {
       return {
           hasCyclone: false,
           name: "",
@@ -65,100 +69,118 @@ export const fetchTyphoonData = async (): Promise<TyphoonData> => {
   }
 
   // 2. Extract Name
-  // Usually in a header like "Tropical Cyclone Bulletin #15 Super Typhoon 'EGAY'"
+  // Strategies: 
+  // A. Look for "Tropical Cyclone Bulletin" header and extract text in quotes or after "FOR:"
+  // B. Look for elements with class 'cyclone-name' (sometimes used)
   let name = "Unknown Cyclone";
-  const headers = Array.from(doc.querySelectorAll('h3, h2, h4, .page-header'));
-  for (const h of headers) {
+  
+  // Try finding the specific header structure often used by PAGASA
+  // Example: "TROPICAL CYCLONE BULLETIN NO. 15" ... "Super Typhoon 'EGAY'"
+  const possibleHeaders = Array.from(doc.querySelectorAll('h3, h2, h4, .page-header, strong, b'));
+  
+  for (const h of possibleHeaders) {
       const text = h.textContent?.trim() || "";
-      if (text.toLowerCase().includes("tropical cyclone") || text.toLowerCase().includes("typhoon")) {
-          name = text;
+      
+      // Pattern: "FOR: TROPICAL STORM 'NAME'"
+      if (text.includes("FOR:")) {
+          const parts = text.split("FOR:");
+          if (parts[1]) {
+              name = parts[1].trim();
+              break;
+          }
+      }
+      
+      // Pattern: "Typhoon 'NAME'" inside a header
+      const match = text.match(/(?:Typhoon|Storm|Depression)\s+['"]([^'"]+)['"]/i);
+      if (match) {
+          name = match[0]; // Capture full "Typhoon 'NAME'"
           break;
       }
   }
 
-  // 3. Extract Signals
-  // This is tricky as structure varies. We look for patterns like "TCWS No. 1" and grab text until next signal.
-  const signals: TyphoonSignal[] = [];
-  const contentNode = doc.querySelector('.article-content') || doc.body; // Adjust selector based on typical PAGASA structure
-  const contentText = contentNode.textContent || "";
+  // Cleanup name
+  name = name.replace(/['"]/g, ''); // Remove quotes
 
-  // Helper to extract text between signal headers
-  // We use regex to find positions of "TCWS No. X"
-  for (let level = 5; level >= 1; level--) {
-      // Regex to match "TCWS No. 5" or "Signal No. 5"
-      const regex = new RegExp(`(?:TCWS|Signal)\\s*(?:#|No\\.?)\\s*${level}`, 'i');
-      const match = contentText.match(regex);
+
+  // 3. Extract Signals using TreeWalker focused on "Wind Signal" section
+  const signals: TyphoonSignal[] = [];
+  const signalMap = new Map<number, Set<string>>();
+  
+  const contentRoot = doc.querySelector('.article-content') || doc.querySelector('.view-content') || doc.body;
+
+  const walker = doc.createTreeWalker(contentRoot, NodeFilter.SHOW_TEXT);
+  let currentNode = walker.nextNode();
+  let currentLevel = 0;
+  let inWindSignalSection = false;
+
+  while (currentNode) {
+      const text = currentNode.textContent?.trim();
       
-      if (match) {
-          // Found a signal header.
-          // In a real scrape, we'd need sophisticated DOM traversal. 
-          // For this robust fallback, we'll try to find the text block.
-          // A simplified approach: Look for list items <li> closest to the header in DOM
-          
-          // Let's try DOM traversal approach which is better than raw text regex
-          // Find elements containing the signal text
-          const allElements = Array.from(contentNode.querySelectorAll('*'));
-          const signalHeader = allElements.find(el => regex.test(el.textContent || "") && el.children.length === 0); // Leaf node or close to it
-          
-          if (signalHeader) {
-              // Look for the next list (ul/ol) or paragraph siblings
-              let areas: string[] = [];
-              let sibling = signalHeader.parentElement?.nextElementSibling;
+      if (text) {
+          // Detect Start of Section
+          // PAGASA usually labels it "WIND SIGNAL" or "Areas with TCWS"
+          if (text.match(/WIND\s*SIGNAL|Areas\s*with\s*TCWS/i)) {
+              inWindSignalSection = true;
+          }
+
+          // Detect End of Section
+          // Usually followed by "Heavy Rainfall", "Severe Winds", "Track"
+          if (inWindSignalSection && text.match(/HEAVY\s*RAINFALL|SEVERE\s*WINDS|TRACK\s*AND\s*INTENSITY|HAZARDS/i)) {
+              inWindSignalSection = false;
+              currentLevel = 0;
+          }
+
+          if (inWindSignalSection) {
+               // Detect Signal Header (e.g., "TCWS No. 1", "Signal No. 2")
+              const signalMatch = text.match(/(?:TCWS|Signal)\s*(?:#|No\.?)\s*(\d)/i);
               
-              // Traverse siblings to find area descriptions
-              // Limit traversal to avoid grabbing footer text
-              let count = 0;
-              while (sibling && count < 5) {
-                  const text = sibling.textContent?.trim();
-                  if (text) {
-                      // Stop if we hit another signal header
-                      if (/(?:TCWS|Signal)\s*(?:#|No\\.?)\s*\d/i.test(text)) break;
-                      
-                      // If it's a list, grab items
-                      if (sibling.tagName === 'UL' || sibling.tagName === 'OL') {
-                          const items = Array.from(sibling.querySelectorAll('li')).map(li => li.textContent?.trim() || "").filter(Boolean);
-                          areas.push(...items);
-                      } else if (text.length > 10 && text.length < 500) {
-                          // Likely a paragraph listing areas
-                          areas.push(text);
-                      }
+              if (signalMatch) {
+                  currentLevel = parseInt(signalMatch[1], 10);
+              } else if (currentLevel > 0) {
+                  // We are inside a signal block
+                  
+                  // Filter out headers or noise
+                  const isRegionHeader = /^(Luzon|Visayas|Mindanao)$/i.test(text.replace(/[:]/g, '').trim());
+                  const isLabel = /^(Prov|Area|Location)/i.test(text);
+
+                  if (!isLabel && text.length > 3) {
+                       if (!signalMap.has(currentLevel)) {
+                           signalMap.set(currentLevel, new Set());
+                       }
+                       // Clean up leading dashes/bullets
+                       const cleanArea = text.replace(/^[-•*]\s*/, '').trim();
+                       signalMap.get(currentLevel)?.add(cleanArea);
                   }
-                  sibling = sibling.nextElementSibling;
-                  count++;
-              }
-              
-              if (areas.length > 0) {
-                  signals.push({ level, areas });
               }
           }
       }
+      currentNode = walker.nextNode();
   }
 
-  // Fallback: If "hasCyclone" is true (didn't match "No active...") but we couldn't parse name/signals, 
-  // we still return active state so the user checks the link.
-  if (signals.length === 0 && name === "Unknown Cyclone") {
-       // Double check active status based on keyword "Location of Eye" or "Center"
-       if (!bodyText.includes("Location of Eye") && !bodyText.includes("Center")) {
-           // Probably actually no cyclone and our first check failed
-           return {
-            hasCyclone: false,
-            name: "",
-            issuedAt: new Date().toISOString(),
-            url: PAGASA_URL,
-            signals: [],
-            summary: "No active tropical cyclone detected."
-            };
-       }
+  // Convert Map to Interface
+  signalMap.forEach((areaSet, level) => {
+      const areas = Array.from(areaSet);
+      if (areas.length > 0) {
+        signals.push({ level, areas });
+      }
+  });
+
+  // Sort signals highest to lowest
+  signals.sort((a, b) => b.level - a.level);
+
+  // Fallback for Name if still generic
+  if (name === "Unknown Cyclone" && signals.length > 0) {
+      name = "Active Tropical Cyclone"; 
   }
 
   return {
       hasCyclone: true,
       name: name,
-      issuedAt: new Date().toISOString(), // We could parse "Issued at..." but using fetch time is safer fallback
+      issuedAt: new Date().toISOString(),
       url: PAGASA_URL,
       signals: signals,
       summary: signals.length > 0 
-        ? `Active Signals: ${signals.map(s => `Signal #${s.level}`).join(', ')}` 
-        : "Active Cyclone detected. View full bulletin for details."
+        ? `Signals Raised: ${signals.map(s => `#${s.level}`).join(', ')}` 
+        : "Active Cyclone detected. See details."
   };
 };
